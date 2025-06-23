@@ -81,108 +81,351 @@
 
 ### PC端界面设计
 
-#### 浮动窗口设计
+#### 紧凑悬浮窗设计 (280x200px)
 ```
-┌─────────────────────────────────┐
-│ 📷 ⚙️                    ─ □ ✕ │ ← 标题栏
-├─────────────────────────────────┤
-│                                 │
-│        拖拽文件到此处            │ ← 拖拽区域
-│         📁 选择文件              │
-│                                 │
-├─────────────────────────────────┤
-│ 📱 已连接设备: iPhone 13        │ ← 设备状态
-├─────────────────────────────────┤
-│ 📄 screenshot_001.png    ✓     │
-│ 📄 document.pdf          ⏳     │ ← 传输列表
-│ 📄 image.jpg             ❌     │
-└─────────────────────────────────┘
+┌─────────────────────────────┐
+│ 📁 ⚙️              ─ □ ✕ │ ← 极简标题栏
+├─────────────────────────────┤
+│     拖拽文件到此处           │ ← 主拖拽区域
+│        📤 上传              │
+├─────────────────────────────┤
+│ 📱 iPhone 13 ●             │ ← 设备状态
+├─────────────────────────────┤
+│ 📄 image.png      [拖拽]    │ ← 可拖拽文件列表
+│ 📄 doc.pdf        [拖拽]    │   (最多显示2-3个)
+└─────────────────────────────┘
 ```
 
-**特性:**
-- **尺寸**: 320x480px，可调整
-- **透明度**: 95%透明度，毛玻璃效果
-- **置顶**: 始终保持在最前面
-- **拖拽**: 支持窗口拖拽移动
+#### 最小化模式 (60x60px)
+```
+┌─────────┐
+│   📁    │ ← 悬浮图标
+│  (3)    │ ← 文件数量
+└─────────┘
+```
+
+**核心特性:**
+- **尺寸**: 280x200px 正常模式，60x60px 最小化模式
+- **透明度**: 90%透明度，高斯模糊背景
+- **置顶**: 系统级始终置顶，优先级高于所有应用
+- **拖拽**: 双向拖拽 - 拖入上传，拖出分享
+- **自动隐藏**: 鼠标离开3秒后自动半透明
+- **智能定位**: 自动避开其他窗口，贴边吸附
 
 ### 移动端界面设计
 
-#### 底部导航结构
+#### 悬浮窗模式设计
+
+##### 展开状态 (320x400px)
 ```
-┌─────────────────────────────────┐
-│            首页                  │
-│                                 │
-│  ┌─────────┐  ┌─────────┐       │
-│  │ 连接状态 │  │ 快速操作 │       │
-│  └─────────┘  └─────────┘       │
-│                                 │
-│        最近传输文件              │
-│  ┌─────────────────────────┐    │
-│  │ 📷 screenshot.png       │    │
-│  │ 📄 document.pdf         │    │
-│  └─────────────────────────┘    │
-└─────────────────────────────────┘
-│  🏠   📁   ⇄   ⚙️  │ ← 底部导航
+┌─────────────────────────────┐
+│ 📁 文件传输    ─ □ ✕       │ ← 标题栏
+├─────────────────────────────┤
+│ 📱 PC已连接 ●              │ ← 连接状态
+├─────────────────────────────┤
+│ 📄 image.png     [分享]     │ ← 可分享文件
+│ 📄 doc.pdf       [分享]     │   (支持拖拽到其他应用)
+│ 📄 video.mp4     [分享]     │
+├─────────────────────────────┤
+│     📤 接收新文件            │ ← 接收区域
+└─────────────────────────────┘
+```
+
+##### 最小化状态 (80x80px)
+```
+┌─────────┐
+│   📁    │ ← 悬浮图标
+│  (5)    │ ← 文件数量
+│   ●     │ ← 连接状态
+└─────────┘
+```
+
+##### 通知气泡模式 (200x60px)
+```
+┌─────────────────────┐
+│ 📄 收到新文件        │ ← 新文件通知
+│ image.png [查看]     │
 └─────────────────────┘
 ```
 
+**移动端特性:**
+- **权限**: Android System Alert Window，iOS Picture-in-Picture
+- **手势**: 长按拖拽分享，双击展开/收起
+- **自适应**: 根据屏幕方向自动调整位置
+- **分享集成**: 直接拖拽到微信、邮件等应用
+- **通知**: 新文件到达时显示气泡通知
+
 ### 交互流程设计
 
-#### 设备配对流程
+#### 悬浮窗拖拽交互流程
+
+##### PC端拖拽上传流程
 ```mermaid
 sequenceDiagram
-    participant PC as PC端
+    participant User as 用户
+    participant Float as 悬浮窗
+    participant System as 系统
     participant Server as 服务器
-    participant Mobile as 移动端
-    
-    PC->>Server: 请求配对二维码
-    Server->>PC: 返回二维码
-    Mobile->>PC: 扫描二维码
-    Mobile->>Server: 发送配对请求
-    Server->>PC: 通知配对请求
-    PC->>Server: 确认配对
-    Server->>Mobile: 配对成功
-    Server->>PC: 配对成功
+
+    User->>Float: 拖拽文件到悬浮窗
+    Float->>System: 获取文件路径
+    Float->>Server: 上传文件
+    Server->>Float: 返回上传进度
+    Float->>User: 显示上传状态
+    Server->>Float: 上传完成通知
+    Float->>User: 显示可拖拽文件
 ```
 
-#### 文件传输流程
+##### PC端拖拽分享流程
 ```mermaid
 sequenceDiagram
-    participant PC as PC端
+    participant User as 用户
+    participant Float as 悬浮窗
+    participant Target as 目标应用
+    participant System as 系统
+
+    User->>Float: 从悬浮窗拖拽文件
+    Float->>System: 创建临时文件链接
+    System->>Target: 传递文件数据
+    Target->>User: 接收文件
+    Float->>User: 显示分享成功
+```
+
+##### 移动端分享流程
+```mermaid
+sequenceDiagram
+    participant User as 用户
+    participant Float as 悬浮窗
+    participant Target as 目标应用
+    participant System as 系统分享
+
+    User->>Float: 长按文件进行分享
+    Float->>System: 调用系统分享Intent
+    System->>User: 显示应用选择器
+    User->>Target: 选择目标应用
+    Target->>User: 接收文件
+```
+
+#### 设备配对流程（简化版）
+```mermaid
+sequenceDiagram
+    participant PC as PC悬浮窗
+    participant Mobile as 移动悬浮窗
     participant Server as 服务器
-    participant Storage as 文件存储
-    participant Mobile as 移动端
-    
-    PC->>Server: 上传文件
-    Server->>Storage: 存储文件
-    Storage->>Server: 返回文件URL
-    Server->>Mobile: 推送通知
-    Mobile->>Server: 请求文件列表
-    Server->>Mobile: 返回文件信息
-    Mobile->>Storage: 下载文件
+
+    PC->>Server: 生成配对码
+    Server->>PC: 返回6位数字码
+    Mobile->>Server: 输入配对码
+    Server->>PC: 配对成功通知
+    Server->>Mobile: 配对成功通知
+    PC->>Mobile: 建立直连通道
+```
+
+## 🎯 悬浮窗技术实现
+
+### PC端悬浮窗技术方案
+
+#### Electron窗口配置
+```typescript
+// 悬浮窗配置
+const floatWindowConfig = {
+  width: 280,
+  height: 200,
+  frame: false,
+  alwaysOnTop: true,
+  skipTaskbar: true,
+  resizable: false,
+  transparent: true,
+  hasShadow: false,
+  webPreferences: {
+    nodeIntegration: true,
+    contextIsolation: false,
+  },
+  // 窗口级别设置为最高
+  level: 'screen-saver',
+  // 禁用窗口动画
+  show: false,
+};
+
+// 最小化模式配置
+const miniWindowConfig = {
+  width: 60,
+  height: 60,
+  // 其他配置同上
+};
+```
+
+#### 系统级拖拽实现
+```typescript
+// 拖拽接收
+window.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'copy';
+});
+
+window.addEventListener('drop', async (e) => {
+  e.preventDefault();
+  const files = Array.from(e.dataTransfer.files);
+  await handleFileUpload(files);
+});
+
+// 拖拽输出
+const handleFileDragStart = (fileInfo) => {
+  // 创建临时文件链接
+  const tempPath = await createTempFileLink(fileInfo);
+
+  // 设置拖拽数据
+  e.dataTransfer.setData('text/uri-list', tempPath);
+  e.dataTransfer.effectAllowed = 'copy';
+};
+```
+
+### 移动端悬浮窗技术方案
+
+#### Android System Alert Window
+```typescript
+// 权限申请
+import { check, request, PERMISSIONS } from 'react-native-permissions';
+
+const requestOverlayPermission = async () => {
+  const permission = PERMISSIONS.ANDROID.SYSTEM_ALERT_WINDOW;
+  const result = await check(permission);
+
+  if (result !== 'granted') {
+    await request(permission);
+  }
+};
+
+// 悬浮窗服务
+// android/app/src/main/java/FloatingWindowService.java
+public class FloatingWindowService extends Service {
+  private WindowManager windowManager;
+  private View floatingView;
+
+  @Override
+  public void onCreate() {
+    super.onCreate();
+
+    // 创建悬浮窗布局
+    floatingView = LayoutInflater.from(this)
+      .inflate(R.layout.floating_window, null);
+
+    // 设置窗口参数
+    WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+      WindowManager.LayoutParams.WRAP_CONTENT,
+      WindowManager.LayoutParams.WRAP_CONTENT,
+      WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+      WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+      PixelFormat.TRANSLUCENT
+    );
+
+    windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+    windowManager.addView(floatingView, params);
+  }
+}
+```
+
+#### iOS悬浮窗实现
+```typescript
+// 使用Picture-in-Picture模式
+import PictureInPicture from 'react-native-picture-in-picture';
+
+const enableFloatingMode = async () => {
+  try {
+    await PictureInPicture.enter({
+      width: 320,
+      height: 400,
+      enablePlayPause: false,
+      enableSkipButtons: false,
+    });
+  } catch (error) {
+    console.error('PiP模式启动失败:', error);
+  }
+};
+
+// 或使用自定义悬浮窗（需要原生模块）
+// ios/FloatingWindow.swift
+class FloatingWindow: UIWindow {
+  override init(frame: CGRect) {
+    super.init(frame: frame)
+
+    // 设置窗口级别
+    self.windowLevel = UIWindow.Level.statusBar + 1
+    self.backgroundColor = UIColor.clear
+    self.isHidden = false
+  }
+}
 ```
 
 ## 🔧 核心功能模块
 
-### 1. 文件传输模块
+### 1. 悬浮窗管理模块
 
-#### 传输机制
-- **本地网络**: WebRTC P2P直连
-- **跨网络**: 云端中转服务
-- **大文件**: 分片上传，断点续传
-- **压缩**: 图片智能压缩，文档原样传输
-
-#### 传输协议
+#### 窗口状态管理
 ```typescript
-interface TransferProtocol {
-  version: string;
-  type: 'p2p' | 'relay';
-  encryption: 'aes-256-gcm';
-  compression: 'gzip' | 'none';
-  chunkSize: number;
-  checksum: string;
+interface FloatingWindowState {
+  isVisible: boolean;
+  isMinimized: boolean;
+  position: { x: number; y: number };
+  size: { width: number; height: number };
+  opacity: number;
+  alwaysOnTop: boolean;
+}
+
+class FloatingWindowManager {
+  private state: FloatingWindowState;
+
+  // 切换最小化状态
+  toggleMinimize(): void;
+
+  // 自动隐藏
+  autoHide(delay: number): void;
+
+  // 智能定位
+  smartPosition(): void;
+
+  // 贴边吸附
+  snapToEdge(): void;
 }
 ```
+
+### 2. 文件传输模块
+
+#### 拖拽传输机制
+- **拖入上传**: 支持多文件同时拖拽上传
+- **拖出分享**: 创建临时文件链接，支持拖拽到任意应用
+- **实时预览**: 拖拽过程中显示文件缩略图
+- **智能压缩**: 根据目标应用自动选择压缩策略
+
+#### 跨应用拖拽协议
+```typescript
+interface DragTransferProtocol {
+  // PC端拖拽数据格式
+  dragData: {
+    type: 'file' | 'text' | 'image';
+    mimeType: string;
+    fileName: string;
+    fileSize: number;
+    tempPath: string;  // 临时文件路径
+    downloadUrl: string;  // 云端下载链接
+  };
+
+  // 移动端分享数据格式
+  shareData: {
+    type: 'file' | 'text' | 'image';
+    uri: string;
+    mimeType: string;
+    fileName: string;
+    intent: 'share' | 'send' | 'view';
+  };
+}
+```
+
+#### 传输优化策略
+- **本地优先**: 同设备间直接文件系统操作
+- **P2P直连**: 局域网内设备间直接传输
+- **云端中转**: 跨网络传输的备用方案
+- **智能路由**: 根据网络状况自动选择最优路径
 
 ### 2. 设备管理模块
 
@@ -432,32 +675,77 @@ socket.emit('device:file:received', {
 });
 ```
 
-## 🎯 用户体验设计
+## 🎯 悬浮窗用户体验设计
 
-### PC端用户流程
+### PC端悬浮窗交互体验
 
-#### 首次使用流程
-1. **安装启动**: 下载安装包，首次启动应用
-2. **设备注册**: 自动生成设备ID，显示配对二维码
-3. **移动端配对**: 使用移动端扫描二维码完成配对
-4. **功能引导**: 简单的功能介绍和使用指南
+#### 智能显示逻辑
+1. **自动定位**: 启动时自动选择最佳位置，避开其他窗口
+2. **贴边吸附**: 拖拽到屏幕边缘时自动吸附
+3. **智能隐藏**: 鼠标离开3秒后自动半透明，不干扰工作
+4. **焦点管理**: 不抢夺其他应用焦点，保持后台运行
 
-#### 日常使用流程
-1. **快速截图**: Ctrl+Shift+S 快捷键截图并传输
-2. **拖拽传输**: 拖拽文件到浮动窗口进行传输
-3. **查看状态**: 实时查看传输进度和历史记录
+#### 拖拽交互体验
+1. **拖入反馈**: 文件拖拽到悬浮窗时高亮显示接收区域
+2. **上传进度**: 实时显示上传进度和速度
+3. **拖出预览**: 鼠标悬停在文件上显示拖拽提示
+4. **多文件支持**: 支持同时拖拽多个文件
 
-### 移动端用户流程
+#### 状态指示系统
+```
+● 绿色 - 设备在线，连接正常
+● 黄色 - 设备连接中或传输中
+● 红色 - 设备离线或传输失败
+● 灰色 - 未配对设备
+```
 
-#### 文件接收流程
-1. **推送通知**: 收到文件传输通知
-2. **查看文件**: 点击通知进入应用查看文件
-3. **文件操作**: 预览、保存到相册、分享给其他应用
+### 移动端悬浮窗交互体验
 
-#### 文件管理流程
-1. **分类浏览**: 按类型查看不同文件
-2. **搜索文件**: 通过文件名搜索特定文件
-3. **批量操作**: 选择多个文件进行删除或分享
+#### 悬浮窗权限引导
+1. **权限说明**: 清晰解释悬浮窗权限的用途和好处
+2. **一键设置**: 直接跳转到系统设置页面
+3. **降级方案**: 权限被拒绝时提供通知栏替代方案
+
+#### 手势交互设计
+- **单击**: 展开/收起悬浮窗
+- **双击**: 切换最小化模式
+- **长按**: 进入拖拽模式
+- **滑动**: 移动悬浮窗位置
+- **捏合**: 调整悬浮窗大小（仅展开状态）
+
+#### 分享集成体验
+1. **智能识别**: 自动识别可接收文件的应用
+2. **快速分享**: 长按文件直接弹出分享选项
+3. **拖拽分享**: 支持拖拽文件到其他应用图标
+4. **批量分享**: 支持选择多个文件一次性分享
+
+### 跨平台一致性体验
+
+#### 视觉一致性
+- **配色方案**: 统一的品牌色彩和主题
+- **图标设计**: 一致的图标风格和含义
+- **动画效果**: 相似的过渡动画和反馈效果
+- **字体排版**: 适配各平台的最佳字体选择
+
+#### 交互一致性
+- **操作逻辑**: 相同功能的操作方式保持一致
+- **反馈机制**: 统一的成功/失败/进度反馈
+- **快捷操作**: 类似的快捷键和手势设计
+- **错误处理**: 一致的错误提示和恢复方案
+
+### 无障碍访问设计
+
+#### 视觉辅助
+- **高对比度**: 支持高对比度主题
+- **字体缩放**: 支持系统字体大小设置
+- **色盲友好**: 不仅依赖颜色传达信息
+- **焦点指示**: 清晰的键盘焦点指示
+
+#### 操作辅助
+- **键盘导航**: 完整的键盘操作支持
+- **屏幕阅读器**: 适配VoiceOver和TalkBack
+- **语音控制**: 支持语音命令操作
+- **简化模式**: 提供简化的操作界面
 
 ## 🔐 安全架构设计
 
