@@ -177,14 +177,44 @@ export const FileList: React.FC<FileListProps> = ({
   };
 
   // 处理文件拖拽开始
-  const handleDragStart = (e: React.DragEvent, fileInfo: FileInfo) => {
+  const handleDragStart = async (e: React.DragEvent, fileInfo: FileInfo) => {
     e.dataTransfer.effectAllowed = 'copy';
-    e.dataTransfer.setData('text/plain', fileInfo.name);
-    
+
+    try {
+      // 准备拖拽数据
+      const dragData = await window.electronAPI?.prepareDragData(fileInfo);
+
+      if (dragData) {
+        // 设置拖拽数据
+        e.dataTransfer.setData('text/plain', fileInfo.name);
+        e.dataTransfer.setData('text/uri-list', dragData.data as string);
+        e.dataTransfer.setData('application/json', JSON.stringify(fileInfo));
+
+        // 创建自定义拖拽预览
+        const dragPreview = await window.electronAPI?.createDragPreview(fileInfo);
+        if (dragPreview) {
+          const previewElement = document.createElement('div');
+          previewElement.innerHTML = dragPreview;
+          previewElement.style.position = 'absolute';
+          previewElement.style.top = '-1000px';
+          document.body.appendChild(previewElement);
+
+          e.dataTransfer.setDragImage(previewElement, 0, 0);
+
+          // 清理预览元素
+          setTimeout(() => {
+            document.body.removeChild(previewElement);
+          }, 0);
+        }
+      }
+    } catch (error) {
+      console.error('准备拖拽数据失败:', error);
+    }
+
     // 设置拖拽样式
     const target = e.currentTarget as HTMLElement;
     target.classList.add('dragging');
-    
+
     // 通知主进程准备文件拖拽
     onFileDrag(fileInfo);
   };

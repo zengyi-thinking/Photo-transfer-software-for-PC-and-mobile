@@ -380,7 +380,17 @@ Authorization: Bearer <jwt_token>
         "version": "16.0",
         "isOnline": true,
         "lastSeen": "2023-08-15T10:30:00Z",
-        "createdAt": "2023-08-01T09:00:00Z"
+        "createdAt": "2023-08-01T09:00:00Z",
+        "floatingWindowEnabled": true,
+        "floatingWindowPosition": {
+          "x": 100,
+          "y": 200
+        },
+        "capabilities": {
+          "systemOverlay": true,
+          "dragDrop": true,
+          "backgroundMode": true
+        }
       },
       {
         "deviceId": "device_789012",
@@ -390,7 +400,18 @@ Authorization: Bearer <jwt_token>
         "version": "11",
         "isOnline": false,
         "lastSeen": "2023-08-15T09:45:00Z",
-        "createdAt": "2023-08-01T09:00:00Z"
+        "createdAt": "2023-08-01T09:00:00Z",
+        "floatingWindowEnabled": true,
+        "floatingWindowPosition": {
+          "x": 1200,
+          "y": 800
+        },
+        "capabilities": {
+          "systemOverlay": true,
+          "dragDrop": true,
+          "backgroundMode": true,
+          "globalShortcuts": true
+        }
       }
     ]
   }
@@ -439,6 +460,81 @@ Authorization: Bearer <jwt_token>
 {
   "success": true,
   "message": "设备移除成功"
+}
+```
+
+### 更新悬浮窗配置
+更新设备的悬浮窗配置。
+
+**请求**
+```http
+PUT /api/devices/device_123456/floating-window
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+
+{
+  "enabled": true,
+  "position": {
+    "x": 150,
+    "y": 300
+  },
+  "isMinimized": false,
+  "autoHide": true,
+  "alwaysOnTop": true
+}
+```
+
+**响应**
+```json
+{
+  "success": true,
+  "data": {
+    "deviceId": "device_123456",
+    "floatingWindowEnabled": true,
+    "floatingWindowPosition": {
+      "x": 150,
+      "y": 300
+    },
+    "floatingWindowConfig": {
+      "isMinimized": false,
+      "autoHide": true,
+      "alwaysOnTop": true
+    },
+    "updatedAt": "2023-08-15T10:30:00Z"
+  }
+}
+```
+
+### 获取设备权限状态
+获取设备的权限状态（如悬浮窗权限）。
+
+**请求**
+```http
+GET /api/devices/device_123456/permissions
+Authorization: Bearer <jwt_token>
+```
+
+**响应**
+```json
+{
+  "success": true,
+  "data": {
+    "deviceId": "device_123456",
+    "permissions": {
+      "systemOverlay": true,
+      "storage": true,
+      "camera": true,
+      "notification": true,
+      "backgroundApp": true
+    },
+    "capabilities": {
+      "dragDrop": true,
+      "systemIntegration": true,
+      "globalShortcuts": true,
+      "autoStart": true
+    },
+    "checkedAt": "2023-08-15T10:30:00Z"
+  }
 }
 ```
 
@@ -594,7 +690,12 @@ socket.emit('authenticated', {
 socket.emit('device:online', {
   deviceId: 'device_123456',
   deviceName: 'iPhone 13',
-  timestamp: '2023-08-15T10:30:00Z'
+  timestamp: '2023-08-15T10:30:00Z',
+  floatingWindowEnabled: true,
+  capabilities: {
+    systemOverlay: true,
+    dragDrop: true
+  }
 });
 ```
 
@@ -604,6 +705,50 @@ socket.emit('device:online', {
 socket.emit('device:offline', {
   deviceId: 'device_123456',
   deviceName: 'iPhone 13',
+  timestamp: '2023-08-15T10:30:00Z'
+});
+```
+
+#### 悬浮窗状态更新
+```javascript
+// 客户端发送悬浮窗状态更新
+socket.emit('floating-window:update', {
+  deviceId: 'device_123456',
+  position: { x: 150, y: 300 },
+  isMinimized: false,
+  isVisible: true
+});
+
+// 服务器广播状态更新
+socket.emit('floating-window:status', {
+  deviceId: 'device_123456',
+  position: { x: 150, y: 300 },
+  isMinimized: false,
+  isVisible: true,
+  timestamp: '2023-08-15T10:30:00Z'
+});
+```
+
+#### 权限状态更新
+```javascript
+// 客户端发送权限状态更新
+socket.emit('permissions:update', {
+  deviceId: 'device_123456',
+  permissions: {
+    systemOverlay: true,
+    storage: true,
+    camera: false
+  }
+});
+
+// 服务器确认权限更新
+socket.emit('permissions:updated', {
+  deviceId: 'device_123456',
+  permissions: {
+    systemOverlay: true,
+    storage: true,
+    camera: false
+  },
   timestamp: '2023-08-15T10:30:00Z'
 });
 ```
@@ -720,7 +865,65 @@ socket.emit('file:received', {
   fromDeviceName: 'iPhone 13',
   downloadUrl: 'https://cdn.filetransfer.com/files/file_123456',
   thumbnailUrl: 'https://cdn.filetransfer.com/thumbs/file_123456',
-  receivedAt: '2023-08-15T10:30:15Z'
+  receivedAt: '2023-08-15T10:30:15Z',
+  dragDropSupported: true
+});
+```
+
+#### 拖拽传输事件
+
+##### 拖拽开始
+```javascript
+// 客户端发送拖拽开始事件
+socket.emit('drag:start', {
+  fileId: 'file_123456',
+  fileName: 'screenshot.png',
+  fileSize: 1048576,
+  mimeType: 'image/png',
+  fromDevice: 'device_123456',
+  dragData: {
+    type: 'file',
+    tempPath: '/tmp/screenshot.png'
+  }
+});
+```
+
+##### 拖拽到外部应用
+```javascript
+// 客户端通知拖拽到外部应用
+socket.emit('drag:external', {
+  fileId: 'file_123456',
+  targetApp: 'com.tencent.mm', // 微信
+  dragType: 'file',
+  success: true,
+  timestamp: '2023-08-15T10:30:00Z'
+});
+```
+
+##### 跨设备拖拽
+```javascript
+// 客户端发起跨设备拖拽
+socket.emit('drag:cross-device', {
+  fileId: 'file_123456',
+  fromDevice: 'device_123456',
+  toDevice: 'device_789012',
+  dragData: {
+    type: 'file',
+    fileName: 'screenshot.png',
+    mimeType: 'image/png'
+  }
+});
+
+// 服务器转发到目标设备
+socket.emit('drag:receive', {
+  fileId: 'file_123456',
+  fromDevice: 'device_123456',
+  dragData: {
+    type: 'file',
+    fileName: 'screenshot.png',
+    mimeType: 'image/png',
+    downloadUrl: 'https://api.example.com/files/file_123456'
+  }
 });
 ```
 
